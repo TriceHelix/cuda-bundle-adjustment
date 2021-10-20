@@ -1,19 +1,30 @@
-cmake_minimum_required(VERSION 3.7)
+cmake_minimum_required(VERSION 3.15)
 
-project(cuda_bundle_adjustment)
+cmake_policy(SET CMP0091 NEW)
+
+project(cuda_bundle_adjustment LANGUAGES CUDA CXX)
+
+if(NOT DEFINED CMAKE_INSTALL_PREFIX)
+  set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/install)
+endif()
 
 set(CUBA_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
 include_directories(${CUBA_INCLUDE_DIR})
 
-# CUDA
-find_package(CUDA REQUIRED)
-include_directories(${CUDA_INCLUDE_DIRS})
+# Find CUDA Toolkit
+find_package(CUDAToolkit MODULE REQUIRED)
 
-CUDA_SELECT_NVCC_ARCH_FLAGS(ARCH_FLAGS "Auto")
-set(CUDA_ARCH "${ARCH_FLAGS}" CACHE STRING "Value of the NVCC -arch option." FORCE)
-set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} ${CUDA_ARCH} -lineinfo")
+# Set CUDA architectures
+set(CMAKE_CUDA_ARCHITECTURES 50 52 60 62 70 72 75 80 86 CACHE STRING "CUDA architectures")
 
-message(STATUS "CUDA_ARCH: \"${CUDA_ARCH}\"")
+# Build shared/static lib
+set(CUBA_LIB_TYPE SHARED)
+if(NOT ${BUILD_SHARED_LIBS})
+  set(CUBA_LIB_TYPE STATIC)
+endif()
+
+# Runtime Library
+set(CMAKE_CUDA_RUNTIME_LIBRARY Static)
 
 # Eigen
 find_package(Eigen3 REQUIRED)
@@ -24,9 +35,8 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	set(CMAKE_CXX_FLAGS "-O3 -Wall")
 endif()
 
-if (WIN32)
-	set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -Xcompiler \"/wd 4819\" -Xcompiler \"/wd 4244\"")
-	add_compile_options(/wd4819)
+if(WIN32)
+	#add_compile_options(/wd4819 /wd4244)
 	add_definitions(-D_SILENCE_CXX17_NEGATORS_DEPRECATION_WARNING)
 endif()
 
@@ -35,7 +45,15 @@ if (USE_FLOAT32)
 endif()
 
 file(GLOB srcs ./*.cpp ./*.cu ./*.h ${CUBA_INCLUDE_DIR}/*.h)
-cuda_add_library(cuda_bundle_adjustment ${srcs})
+add_library(cuda_bundle_adjustment ${CUBA_LIB_TYPE} ${srcs})
+
+# CUDA compile options
+target_compile_options(cuda_bundle_adjustment PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+  --generate-line-info
+  --use_fast_math
+>)
+
+# Link against CUDA libraries
 target_link_libraries(cuda_bundle_adjustment ${CUDA_cusparse_LIBRARY} ${CUDA_cusolver_LIBRARY})
 
 install(
