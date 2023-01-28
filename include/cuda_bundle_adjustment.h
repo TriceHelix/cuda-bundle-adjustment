@@ -77,11 +77,6 @@ public:
 	*/
 	virtual void removeEdge(BaseEdge* e) = 0;
 
-	/** @brief Sets a camera parameters to the graph.
-	@note The camera parameters are the same in all edges.
-	*/
-	virtual void setCameraPrams(const CameraParams& camera) = 0;
-
 	/** @brief Returns the number of poses in the graph.
 	*/
 	virtual size_t nposes() const = 0;
@@ -93,6 +88,10 @@ public:
 	/** @brief Returns the total number of edges in the graph.
 	*/
 	virtual size_t nedges() const = 0;
+
+	/** @brief Sets robust kernels to specified edges.
+	*/
+	virtual void setRobustKernels(RobustKernelType kernelType, double delta, EdgeType edgeType) = 0;
 
 	/** @brief Initializes the graph.
 	*/
@@ -113,7 +112,12 @@ public:
 
 	/** @brief Returns the time profile.
 	*/
-	virtual const TimeProfile& timeProfile() = 0;
+	virtual const TimeProfile& timeProfile() const = 0;
+
+	/** @brief Returns the Chi-squared of the edge.
+	@note Returns 0 if the edge is inactive (pose and landmark are both fixed).
+	*/
+	virtual double chiSquared(const BaseEdge* e) const = 0;
 
 	/** @brief the destructor.
 	*/

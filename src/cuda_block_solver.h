@@ -18,6 +18,7 @@ limitations under the License.
 #define __CUDA_BLOCK_SOLVER_H__
 
 #include "device_matrix.h"
+#include "robust_kernel.h"
 
 namespace cuba
 {
@@ -27,28 +28,32 @@ namespace gpu
 
 void waitForKernelCompletion();
 
-void setCameraParameters(const Scalar* camera);
-
 void buildHplStructure(GpuVec3i& blockpos, GpuHplBlockMat& Hpl, GpuVec1i& indexPL, GpuVec1i& nnzPerCol);
 
 void findHschureMulBlockIndices(const GpuHplBlockMat& Hpl, const GpuHscBlockMat& Hsc,
 	GpuVec3i& mulBlockIds);
 
-Scalar computeActiveErrors(const GpuVec4d& qs, const GpuVec3d& ts, const GpuVec3d& Xws,
-	const GpuVec2d& measurements, const GpuVec1d& omegas, const GpuVec2i& edge2PL,
+Scalar computeActiveErrors(const GpuVec4d& qs, const GpuVec3d& ts, const GpuVec5d& cameras, const GpuVec3d& Xws,
+	const GpuVec2d& measurements, const GpuVec1d& omegas, const GpuVec2i& edge2PL, const RobustKernel& kernel,
 	GpuVec2d& errors, GpuVec3d& Xcs, Scalar* chi);
 
-Scalar computeActiveErrors(const GpuVec4d& qs, const GpuVec3d& ts, const GpuVec3d& Xws,
-	const GpuVec3d& measurements, const GpuVec1d& omegas, const GpuVec2i& edge2PL,
+Scalar computeActiveErrors(const GpuVec4d& qs, const GpuVec3d& ts, const GpuVec5d& cameras, const GpuVec3d& Xws,
+	const GpuVec3d& measurements, const GpuVec1d& omegas, const GpuVec2i& edge2PL, const RobustKernel& kernel,
 	GpuVec3d& errors, GpuVec3d& Xcs, Scalar* chi);
 
-void constructQuadraticForm(const GpuVec3d& Xcs, const GpuVec4d& qs, const GpuVec2d& errors,
-	const GpuVec1d& omegas, const GpuVec2i& edge2PL, const GpuVec1i& edge2Hpl, const GpuVec1b& flags,
+void constructQuadraticForm(const GpuVec3d& Xcs, const GpuVec4d& qs, const GpuVec5d& cameras, const GpuVec2d& errors,
+	const GpuVec1d& omegas, const GpuVec2i& edge2PL, const GpuVec1i& edge2Hpl, const GpuVec1b& flags, const RobustKernel& kernel,
 	GpuPxPBlockVec& Hpp, GpuPx1BlockVec& bp, GpuLxLBlockVec& Hll, GpuLx1BlockVec& bl, GpuHplBlockMat& Hpl);
 
-void constructQuadraticForm(const GpuVec3d& Xcs, const GpuVec4d& qs, const GpuVec3d& errors,
-	const GpuVec1d& omegas, const GpuVec2i& edge2PL, const GpuVec1i& edge2Hpl, const GpuVec1b& flags,
+void constructQuadraticForm(const GpuVec3d& Xcs, const GpuVec4d& qs, const GpuVec5d& cameras, const GpuVec3d& errors,
+	const GpuVec1d& omegas, const GpuVec2i& edge2PL, const GpuVec1i& edge2Hpl, const GpuVec1b& flags, const RobustKernel& kernel,
 	GpuPxPBlockVec& Hpp, GpuPx1BlockVec& bp, GpuLxLBlockVec& Hll, GpuLx1BlockVec& bl, GpuHplBlockMat& Hpl);
+
+void computeChiSquares(const GpuVec4d& qs, const GpuVec3d& ts, const GpuVec5d& cameras, const GpuVec3d& Xws,
+	const GpuVec2d& measurements, const GpuVec1d& omegas, const GpuVec2i& edge2PL, GpuVec1d& chiSqs);
+
+void computeChiSquares(const GpuVec4d& qs, const GpuVec3d& ts, const GpuVec5d& cameras, const GpuVec3d& Xws,
+	const GpuVec3d& measurements, const GpuVec1d& omegas, const GpuVec2i& edge2PL, GpuVec1d& chiSqs);
 
 Scalar maxDiagonal(const GpuPxPBlockVec& Hpp, Scalar* maxD);
 
@@ -83,6 +88,10 @@ void updatePoses(const GpuPx1BlockVec& xp, GpuVec4d& qs, GpuVec3d& ts);
 void updateLandmarks(const GpuLx1BlockVec& xl, GpuVec3d& Xws);
 
 void computeScale(const GpuVec1d& x, const GpuVec1d& b, Scalar* scale, Scalar lambda);
+
+void solveDiagonalSystem(const GpuPxPBlockVec& Hpp, GpuPx1BlockVec& bp, GpuPx1BlockVec& xp);
+
+void solveDiagonalSystem(const GpuLxLBlockVec& Hll, GpuLx1BlockVec& bl, GpuLx1BlockVec& xl);
 
 } // namespace gpu
 
